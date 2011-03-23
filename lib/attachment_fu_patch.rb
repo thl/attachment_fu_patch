@@ -8,14 +8,18 @@ module Technoweenie # :nodoc:
 
       mattr_reader :content_types, :supported_raw_formats
       
-      def convert_if_unsupported(file, filename = file)
+      def convert_if_necessary(file, filename, rotation)
         ext = File.extname(filename) # on purpose not using file since tempfile may loose extension.
         ext = ext[1...ext.size].downcase if !ext.blank?
         if supported_raw_formats.include? ext
           begin
             # Log the failure to load the image.  This should match ::Magick::ImageMagickError
             # but that would cause acts_as_attachment to require rmagick.
-            message = `ufraw-batch '#{file}' '--out-path=#{Technoweenie::AttachmentFu.tempfile_path}'`
+            if rotation.nil?
+              message = `ufraw-batch '#{file}' '--out-path=#{Technoweenie::AttachmentFu.tempfile_path}'` # add --rotate=angle
+            else
+              message = `ufraw-batch '#{file}' '--out-path=#{Technoweenie::AttachmentFu.tempfile_path}' --rotate=#{rotation}` # add --rotate=angle
+            end
             base_name = "#{File.basename(file,'.*')}.ppm"
             original_temp = File.expand_path(File.join(Technoweenie::AttachmentFu.tempfile_path, base_name))
             raise "Format for #{self.filename} could not be processed: #{message}" unless File.exists?(original_temp)
@@ -27,7 +31,16 @@ module Technoweenie # :nodoc:
             return file
           end
         else
-          return file
+          if rotation.nil?
+            return file
+          else
+            original_temp = File.expand_path(File.join(Technoweenie::AttachmentFu.tempfile_path, filename))
+            Magick::Image.read(file).first.rotate(rotation).write(original_temp)
+            raise "Could not rotate #{filename}: #{message}" unless File.exists?(original_temp)
+            new_temp = copy_to_temp_file(original_temp, "#{rand Time.now.to_i}_#{filename}")
+            FileUtils::rm original_temp
+            return new_temp
+          end
         end
       end
     end
@@ -63,13 +76,13 @@ module Technoweenie # :nodoc:
         "#{FilenameUtils.basename(filename)}_#{thumbnail}.jpg"
       end
       
-      def convert_if_unsupported(file)
-        self.class.convert_if_unsupported(file, self.filename)
+      def convert_if_necessary(file, rotation=nil)
+        self.class.convert_if_necessary(file, self.filename, rotation)
       end
       
-      def update_thumbnails
+      def update_thumbnails(rotation = nil)
         if respond_to?(:process_attachment_with_processing) && thumbnailable? && !attachment_options[:thumbnails].blank? && parent_id.nil?
-          temp_file = convert_if_unsupported(temp_path || create_temp_file)
+          temp_file = convert_if_necessary(temp_path || create_temp_file, rotation)
           attachment_options[:thumbnails].each { |suffix, size| create_or_update_thumbnail(temp_file, suffix, *size) }
         end
         @temp_paths.clear
