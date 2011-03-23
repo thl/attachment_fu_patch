@@ -4,7 +4,7 @@ module Technoweenie # :nodoc:
   module AttachmentFu # :nodoc:    
     module ClassMethods
       @@content_types = Image::VALID_MIME_TYPES
-      @@supported_raw_formats = ['nef', 'dng', 'cr2']
+      @@supported_raw_formats = ['cr2', 'crw', 'nef', 'dng', 'raf']
 
       mattr_reader :content_types, :supported_raw_formats
       
