@@ -16,9 +16,9 @@ module Technoweenie # :nodoc:
             # Log the failure to load the image.  This should match ::Magick::ImageMagickError
             # but that would cause acts_as_attachment to require rmagick.
             if rotation.nil?
-              message = `ufraw-batch '#{file}' '--out-path=#{Technoweenie::AttachmentFu.tempfile_path}'` # add --rotate=angle
+              message = `ufraw-batch '#{file}' --overwrite '--out-path=#{Technoweenie::AttachmentFu.tempfile_path}'` # add --rotate=angle
             else
-              message = `ufraw-batch '#{file}' '--out-path=#{Technoweenie::AttachmentFu.tempfile_path}' --rotate=#{rotation}` # add --rotate=angle
+              message = `ufraw-batch '#{file}' --overwrite '--out-path=#{Technoweenie::AttachmentFu.tempfile_path}' --rotate=#{rotation}` # add --rotate=angle
             end
             base_name = "#{File.basename(file,'.*')}.ppm"
             original_temp = File.expand_path(File.join(Technoweenie::AttachmentFu.tempfile_path, base_name))
