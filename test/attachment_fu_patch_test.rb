@@ -1,8 +1,7 @@
-require 'test/unit'
+require 'test_helper'
 
-class AttachmentFuPatchTest < Test::Unit::TestCase
-  # Replace this with your real tests.
-  def test_this_plugin
-    flunk
+class AttachmentFuPatchTest < ActiveSupport::TestCase
+  test "truth" do
+    assert_kind_of Module, AttachmentFuPatch
   end
 end
