@@ -94,7 +94,7 @@ module Technoweenie # :nodoc:
         if @saved_attachment
           save_to_storage
           update_thumbnails
-          callback :after_attachment_saved
+          callback_with_args :after_attachment_saved, nil
         end
       end
       
