@@ -106,7 +106,7 @@ module Technoweenie # :nodoc:
           begin
             date = DateTime.parse(date_time_str.split(":",3).join("-"))
           rescue Exception => exc
-            return nil
+            return date_time_str
           end
           return date
         end
