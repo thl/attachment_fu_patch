@@ -102,7 +102,13 @@ module Technoweenie # :nodoc:
         date_time_str = properties['exif:DateTimeOriginal']
         date_time_str = properties['tiff:timestamp'] if date_time_str.nil?
         if !date_time_str.blank?
-          return DateTime.parse(date_time_str.split(":",3).join("-"))
+          date = nil
+          begin
+            date = DateTime.parse(date_time_str.split(":",3).join("-"))
+          rescue Exception => exc
+            return nil
+          end
+          return date
         end
         return nil
       end
