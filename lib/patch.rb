@@ -80,10 +80,39 @@ module Technoweenie # :nodoc:
         self.class.convert_if_necessary(file, self.filename, rotation)
       end
       
+      def create_or_update_thumbnail(temp_file, file_name_suffix, size)
+        thumbnailable? || raise(ThumbnailError.new("Can't create a thumbnail if the content type is not an image or there is no parent_id column"))
+        find_or_initialize_thumbnail(file_name_suffix).tap do |thumb|
+          thumb.temp_paths.unshift temp_file
+          thumb.send(:assign_attributes, {
+            :content_type             => content_type,
+            :filename                 => thumbnail_name_for(file_name_suffix),
+            :thumbnail_resize_options => size
+          }, :without_protection => true)
+          callback_with_args :before_thumbnail_saved, thumb
+          thumb.save!
+        end
+      end
+      
       def update_thumbnails(rotation = nil)
-        if respond_to?(:process_attachment_with_processing) && thumbnailable? && !attachment_options[:thumbnails].blank? && parent_id.nil?
+        if respond_to?(:process_attachment_with_processing, true) && thumbnailable? && !attachment_options[:thumbnails].blank? && parent_id.nil?
           temp_file = convert_if_necessary(temp_path || create_temp_file, rotation)
-          attachment_options[:thumbnails].each { |suffix, size| create_or_update_thumbnail(temp_file, suffix, *size) }
+          attachment_options[:thumbnails].each { |suffix, size|
+            if size.is_a?(Symbol)
+              parent_type = polymorphic_parent_type
+              next unless parent_type && [parent_type, parent_type.tableize].include?(suffix.to_s) && respond_to?(size)
+              size = send(size)
+            #end
+            #if size.is_a?(Hash)
+            #  parent_type = polymorphic_parent_type
+            #  next unless parent_type && [parent_type, parent_type.tableize].include?(suffix.to_s)
+            #  size.each { |ppt_suffix, ppt_size|
+            #    create_or_update_thumbnail(temp_file, ppt_suffix, *ppt_size)
+            #  }
+            else
+              create_or_update_thumbnail(temp_file, suffix, size)
+            end
+          }
         end
         @temp_paths.clear
         @saved_attachment = nil
@@ -149,21 +178,38 @@ module Technoweenie # :nodoc:
         protected
         
         # Performs the actual resizing operation for a thumbnail
-        def resize_image(img, size)
+        def resize_image(img, size_options)
+          if size_options.is_a?(Hash)
+            size =  size_options[:geometry]
+            density = size_options[:density]
+            quality = size_options[:quality]
+          else 
+            size = size_options
+          end
           size = size.first if size.is_a?(Array) && size.length == 1 && !size.first.is_a?(Fixnum)
-          quality = nil
           if size.is_a?(Fixnum) || (size.is_a?(Array) && size.first.is_a?(Fixnum))
             size = [size, size] if size.is_a?(Fixnum)
             img.thumbnail!(*size)
+          elsif size.is_a?(String) && size =~ /^c.*$/ # Image cropping - example geometry string: c75x75
+            dimensions = size[1..size.size].split("x")
+            img.crop_resized!(dimensions[0].to_i, dimensions[1].to_i)
           else
-            quality = ImageUtils::resize_image(img, size) if size.is_a?(String)
+            img.change_geometry(size.to_s) { |cols, rows, image|
+              image.resize!(cols<1 ? 1 : cols, rows<1 ? 1 : rows)
+            }
           end
+          self.width  = img.columns if respond_to?(:width)
+          self.height = img.rows    if respond_to?(:height)
+          img = img.sharpen if attachment_options[:sharpen_on_resize] && img.changed?
           img.strip! unless attachment_options[:keep_profile]
+          quality = img.format.to_s[/JPEG/] && get_jpeg_quality if quality.nil?
           data = img.to_blob do
             self.quality = quality if !quality.nil?
+            self.density =  density if !density.nil?
             self.format = 'JPG'
           end
           self.temp_path = write_to_temp_file(data)
+          self.size = File.size(self.temp_path)
         end
       end
     end
