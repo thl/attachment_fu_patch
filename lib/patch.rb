@@ -88,7 +88,7 @@ module Technoweenie # :nodoc:
             :content_type             => content_type,
             :filename                 => thumbnail_name_for(file_name_suffix),
             :thumbnail_resize_options => size
-          }, :without_protection => true)
+          })
           callback_with_args :before_thumbnail_saved, thumb
           thumb.save!
         end
@@ -206,6 +206,7 @@ module Technoweenie # :nodoc:
           data = img.to_blob do
             self.quality = quality if !quality.nil?
             self.density =  density if !density.nil?
+            self.interlace = Magick::PlaneInterlace
             self.format = 'JPG'
           end
           self.temp_path = write_to_temp_file(data)
