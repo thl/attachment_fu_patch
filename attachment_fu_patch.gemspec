@@ -7,11 +7,11 @@ require "attachment_fu_patch/version"
 Gem::Specification.new do |s|
   s.name        = "attachment_fu_patch"
   s.version     = AttachmentFuPatch::VERSION
-  s.authors     = ["TODO: Your name"]
-  s.email       = ["TODO: Your email"]
-  s.homepage    = "TODO"
-  s.summary     = "TODO: Summary of AttachmentFuPatch."
-  s.description = "TODO: Description of AttachmentFuPatch."
+  s.authors     = ["Andres Montano"]
+  s.email       = ["amontano@virginia.edu"]
+  s.homepage    = "http://www.thlib.org"
+  s.summary     = "A patch to the AttachmentFu engine."
+  s.description = "Adds support for raw images to AttachmentFu engine."
 
   s.files = Dir["{app,config,db,lib}/**/*"] + ["MIT-LICENSE", "Rakefile", "README.rdoc"]
   s.test_files = Dir["test/**/*"]
